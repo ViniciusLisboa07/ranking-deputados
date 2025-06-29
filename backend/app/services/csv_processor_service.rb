@@ -12,31 +12,29 @@ class CsvProcessorService
   def process
     puts "Iniciando processamento do arquivo CSV: #{@file_path}"
     
-    CSV.foreach(@file_path, headers: true, col_sep: ';', quote_char: '"', encoding: 'UTF-8') do |row|
-      begin
-        process_row(row)
-        @processed_count += 1
-        
-        if @processed_count % 1000 == 0
-          puts "Processados #{@processed_count} registros..."
-        end
-      rescue => e
-        @error_count += 1
-        @errors << { row: @processed_count + 1, error: e.message }
-        puts "Erro na linha #{@processed_count + 1}: #{e.message}"
+    csv_config = { col_sep: ';', quote_char: '"', encoding: 'UTF-8', liberal_parsing: true }
+    
+    begin
+      test_count = 0
+      CSV.foreach(@file_path, headers: true, **csv_config) do |row|
+        test_count += 1
+        break if test_count >= 5
       end
+      
+      puts "Configuração validada! Processando arquivo completo..."
+      
+    rescue => e
+      puts "Erro ao validar configuração CSV: #{e.message}"
+      return {
+        success: false,
+        error: "Arquivo CSV não pode ser processado. Certifique-se de que está formatado corretamente (separador ';', encoding UTF-8).",
+        processed_count: 0,
+        error_count: 0
+      }
     end
 
-    puts "Processamento concluído!"
-    puts "Total processado: #{@processed_count}"
-    puts "Total de erros: #{@error_count}"
+    process_with_config(csv_config)
     
-    {
-      success: true,
-      processed_count: @processed_count,
-      error_count: @error_count,
-      errors: @errors
-    }
   rescue => e
     puts "Erro geral no processamento: #{e.message}"
     {
@@ -49,6 +47,41 @@ class CsvProcessorService
 
   private
 
+  def process_with_config(config)
+    puts "Processando com configuração: #{config}"
+    
+    CSV.foreach(@file_path, headers: true, **config) do |row|
+      begin
+        process_row(row)
+        @processed_count += 1
+        
+        if @processed_count % 1000 == 0
+          puts "Processados #{@processed_count} registros..."
+        end
+      rescue => e
+        @error_count += 1
+        error_message = "Linha #{@processed_count + 1}: #{e.message}"
+        @errors << error_message
+        puts "Erro na #{error_message}"
+        
+        if @error_count > 100 && @processed_count < 10
+          raise "Muitos erros no início do arquivo. Verifique o formato."
+        end
+      end
+    end
+
+    puts "Processamento concluído!"
+    puts "Total processado: #{@processed_count}"
+    puts "Total de erros: #{@error_count}"
+    
+    {
+      success: true,
+      processed_count: @processed_count,
+      error_count: @error_count,
+      errors: @errors.first(20)
+    }
+  end
+
   def process_row(row)
     deputado = get_or_create_deputado(row)
     
@@ -56,8 +89,8 @@ class CsvProcessorService
   end
 
   def get_or_create_deputado(row)
-    nome = row['txNomeParlamentar']
-    deputado_id = row['nuDeputadoId']
+    nome = clean_field(row['txNomeParlamentar'])
+    deputado_id = clean_field(row['nuDeputadoId'])
     
     return nil if nome.blank? || deputado_id.blank?
 
@@ -68,10 +101,10 @@ class CsvProcessorService
         nome: nome,
         deputado_id: deputado_id.to_i
       ) do |dep|
-        dep.cpf = row['cpf']
-        dep.carteira_parlamentar = row['nuCarteiraParlamentar']
-        dep.uf = row['sgUF']
-        dep.partido = row['sgPartido']
+        dep.cpf = clean_field(row['cpf'])
+        dep.carteira_parlamentar = clean_field(row['nuCarteiraParlamentar'])
+        dep.uf = clean_field(row['sgUF'])
+        dep.partido = clean_field(row['sgPartido'])
       end
     end
 
@@ -82,7 +115,7 @@ class CsvProcessorService
     data_emissao = nil
     if row['datEmissao'].present?
       begin
-        data_emissao = Date.parse(row['datEmissao'])
+        data_emissao = Date.parse(clean_field(row['datEmissao']))
       rescue Date::Error
         data_emissao = nil
       end
@@ -94,30 +127,52 @@ class CsvProcessorService
 
     Despesa.create!(
       deputado: deputado,
-      descricao: row['txtDescricao'],
-      especificacao: row['txtDescricaoEspecificacao'],
-      fornecedor: row['txtFornecedor'],
-      cnpj_cpf_fornecedor: row['txtCNPJCPF'],
-      numero_documento: row['txtNumero'],
-      tipo_documento: row['indTipoDocumento']&.to_i,
+      descricao: clean_field(row['txtDescricao']),
+      especificacao: clean_field(row['txtDescricaoEspecificacao']),
+      fornecedor: clean_field(row['txtFornecedor']),
+      cnpj_cpf_fornecedor: clean_field(row['txtCNPJCPF']),
+      numero_documento: clean_field(row['txtNumero']),
+      tipo_documento: clean_field(row['indTipoDocumento'])&.to_i,
       data_emissao: data_emissao,
       valor_documento: valor_documento,
       valor_glosa: valor_glosa,
       valor_liquido: valor_liquido,
-      mes: row['numMes']&.to_i,
-      ano: row['numAno']&.to_i,
-      parcela: row['numParcela']&.to_i,
-      passageiro: row['txtPassageiro'],
-      trecho: row['txtTrecho'],
-      lote: row['numLote'],
-      url_documento: row['urlDocumento']
+      mes: clean_field(row['numMes'])&.to_i,
+      ano: clean_field(row['numAno'])&.to_i,
+      parcela: clean_field(row['numParcela'])&.to_i,
+      passageiro: clean_field(row['txtPassageiro']),
+      trecho: clean_field(row['txtTrecho']),
+      lote: clean_field(row['numLote']),
+      url_documento: clean_field(row['urlDocumento'])
     )
+  end
+
+  def clean_field(value)
+    return nil if value.blank?
+    
+    cleaned = value.to_s.strip
+    
+    if cleaned.start_with?('"') && cleaned.end_with?('"')
+      cleaned = cleaned[1..-2]
+    end
+    
+    if cleaned.start_with?("'") && cleaned.end_with?("'")
+      cleaned = cleaned[1..-2]
+    end
+    
+    cleaned.blank? ? nil : cleaned
   end
 
   def parse_decimal(value)
     return nil if value.blank?
     
-    cleaned_value = value.to_s.gsub(/["']/, '')
+    cleaned_value = clean_field(value)
+    return nil if cleaned_value.blank?
+    
+    cleaned_value = cleaned_value.gsub(/[^\d.,-]/, '')
+    
+    cleaned_value = cleaned_value.gsub(',', '.')
+    
     BigDecimal(cleaned_value) rescue nil
   end
 end

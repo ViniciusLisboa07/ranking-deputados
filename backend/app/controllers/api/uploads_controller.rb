@@ -5,6 +5,16 @@ class Api::UploadsController < ApplicationController
     begin
       temp_file = save_temp_file
       
+      csv_validation = validate_csv_content(temp_file.path)
+      unless csv_validation[:valid]
+        temp_file.unlink
+        render json: {
+          message: 'Arquivo CSV inválido',
+          error: csv_validation[:error]
+        }, status: :unprocessable_entity
+        return
+      end
+      
       processor = CsvProcessorService.new(temp_file.path)
       result = processor.process
       
@@ -77,6 +87,37 @@ class Api::UploadsController < ApplicationController
         error: 'Tamanho máximo permitido: 80MB'
       }, status: :bad_request
       return
+    end
+
+    unless file.original_filename&.downcase&.end_with?('.csv')
+      render json: { 
+        message: 'Extensão de arquivo inválida',
+        error: 'O arquivo deve ter extensão .csv'
+      }, status: :bad_request
+      return
+    end
+  end
+
+  def validate_csv_content(file_path)
+    # Usar apenas a configuração que funciona
+    csv_config = { col_sep: ';', quote_char: '"', encoding: 'UTF-8', liberal_parsing: true }
+
+    begin
+      CSV.foreach(file_path, headers: true, **csv_config).with_index do |row, index|
+        break if index >= 1
+      end
+      
+      return { valid: true }
+      
+    rescue => e
+      return {
+        valid: false,
+        error: "Arquivo CSV não pode ser lido. O arquivo deve estar formatado com:\n" +
+               " Separador: ponto e vírgula (;)\n" +
+               " Codificação: UTF-8\n" +
+               " Primeira linha deve conter os cabeçalhos das colunas\n" +
+               "\nErro técnico: #{e.message}"
+      }
     end
   end
 
