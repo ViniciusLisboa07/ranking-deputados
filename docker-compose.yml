@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ranking_deputados_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - deputados_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - deputados_network
+
+  backend:
+    build: .
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - .:/app
+    tty: true
+    stdin_open: true
+    environment:
+      RAILS_ENV: development
+      RACK_ENV: development
+      SECRET_KEY_BASE: '43727c68bb893b943e51acfaf0a1afd2b98a401d91083a4d113316717e45c13a6db110ee9c0554a5daa2b64c1166b01eb1e617c867615c389f65638069b96627'
+      DATABASE_URL: postgresql://postgres:password@db:5432/ranking_deputados_development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - deputados_network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:3001"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000
+      - REACT_APP_ENVIRONMENT=development
+    networks:
+      - deputados_network
+
+volumes:
+  postgres_data:
+  bundle_cache:
+
+networks:
+  deputados_network:
+    driver: bridge 
