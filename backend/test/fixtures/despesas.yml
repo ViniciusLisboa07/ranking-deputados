@@ -1,0 +1,41 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  deputado: one
+  descricao: MyString
+  especificacao: MyString
+  fornecedor: MyString
+  cnpj_cpf_fornecedor: MyString
+  numero_documento: MyString
+  tipo_documento: 1
+  data_emissao: 2025-06-29
+  valor_documento: 9.99
+  valor_glosa: 9.99
+  valor_liquido: 9.99
+  mes: 1
+  ano: 1
+  parcela: 1
+  passageiro: MyString
+  trecho: MyString
+  lote: MyString
+  url_documento: MyString
+
+two:
+  deputado: two
+  descricao: MyString
+  especificacao: MyString
+  fornecedor: MyString
+  cnpj_cpf_fornecedor: MyString
+  numero_documento: MyString
+  tipo_documento: 1
+  data_emissao: 2025-06-29
+  valor_documento: 9.99
+  valor_glosa: 9.99
+  valor_liquido: 9.99
+  mes: 1
+  ano: 1
+  parcela: 1
+  passageiro: MyString
+  trecho: MyString
+  lote: MyString
+  url_documento: MyString

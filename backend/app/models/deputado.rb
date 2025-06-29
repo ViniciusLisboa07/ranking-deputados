@@ -1,0 +1,2 @@
+class Deputado < ApplicationRecord
+end
