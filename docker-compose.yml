@@ -25,9 +25,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    command: bash -c "bundle check || bundle install && rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
     volumes:
-      - .:/app
+      - ./backend:/rails
+      - ./backend/tmp:/rails/tmp
+      - ./backend/log:/rails/log
     tty: true
     stdin_open: true
     environment:
@@ -60,7 +62,6 @@ services:
 
 volumes:
   postgres_data:
-  bundle_cache:
 
 networks:
   deputados_network:
