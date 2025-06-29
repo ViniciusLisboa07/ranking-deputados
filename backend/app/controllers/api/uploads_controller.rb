@@ -71,10 +71,10 @@ class Api::UploadsController < ApplicationController
       return
     end
 
-    if file.size > 50.megabytes
+    if file.size > 80.megabytes
       render json: { 
         message: 'Arquivo muito grande',
-        error: 'Tamanho máximo permitido: 50MB'
+        error: 'Tamanho máximo permitido: 80MB'
       }, status: :bad_request
       return
     end

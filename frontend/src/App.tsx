@@ -1,24 +1,20 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import FileUpload from './components/FileUpload';
+import { UploadResponse } from './services/apiService';
 
 function App() {
+  const handleUploadComplete = (response: UploadResponse) => {
+    console.log('Upload completed:', response);
+    // Aqui você pode adicionar lógica adicional após o upload
+    // como atualizar outros componentes, mostrar notificações, etc.
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <main style={{ padding: '40px 20px' }}>
+        <FileUpload onUploadComplete={handleUploadComplete} />
+      </main>
     </div>
   );
 }
