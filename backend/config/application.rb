@@ -34,5 +34,8 @@ module Backend
     
     # Disable HSTS (HTTP Strict Transport Security)
     config.ssl_options = { hsts: false }
+
+    # Configure Sidekiq
+    config.active_job.queue_adapter = :sidekiq
   end
 end

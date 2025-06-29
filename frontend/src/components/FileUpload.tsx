@@ -1,23 +1,34 @@
-import React, { useState, useRef } from 'react';
-import apiService, { UploadResponse } from '../services/apiService';
+import React, { useState, useRef, useEffect } from 'react';
+import apiService, { UploadResponse, UploadStatus } from '../services/apiService';
 
 interface FileUploadProps {
-  onUploadComplete?: (response: UploadResponse) => void;
+  onUploadComplete?: (response: UploadStatus) => void;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [currentUploadId, setCurrentUploadId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (currentUploadId) {
+        setCurrentUploadId(null);
+      }
+    };
+  }, [currentUploadId]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       setError(null);
-      setUploadResult(null);
+      setUploadStatus(null);
+      setCurrentUploadId(null);
     }
   };
 
@@ -42,12 +53,33 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
 
     try {
       const response = await apiService.uploadFile(selectedFile);
-      setUploadResult(response);
-      onUploadComplete?.(response);
       
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      if (response.upload_id) {
+        setCurrentUploadId(response.upload_id);
+        setIsProcessing(true);
+        
+        apiService.pollUploadStatus(
+          response.upload_id,
+          (status) => {
+            setUploadStatus(status);
+            
+            if (status.status === 'processing') {
+              setIsProcessing(true);
+            }
+          }
+        ).then((finalStatus) => {
+          setIsProcessing(false);
+          setUploadStatus(finalStatus);
+          onUploadComplete?.(finalStatus);
+          
+          setSelectedFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }).catch((err) => {
+          setIsProcessing(false);
+          setError(err instanceof Error ? err.message : 'Erro no processamento');
+        });
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -60,7 +92,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
   const resetForm = () => {
     setSelectedFile(null);
     setError(null);
-    setUploadResult(null);
+    setUploadStatus(null);
+    setCurrentUploadId(null);
+    setIsProcessing(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -73,6 +107,38 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
       </div>
     ));
   };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'queued': return '#ffc107';
+      case 'processing': return '#007bff';
+      case 'completed': return '#28a745';
+      case 'failed': return '#dc3545';
+      default: return '#6c757d';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'queued': return '⏳';
+      case 'processing': return '⚙️';
+      case 'completed': return '✅';
+      case 'failed': return '❌';
+      default: return '❓';
+    }
+  };
+
+  const getStatusMessage = (status: string) => {
+    switch (status) {
+      case 'queued': return 'Na fila de processamento';
+      case 'processing': return 'Processando arquivo...';
+      case 'completed': return 'Processamento concluído';
+      case 'failed': return 'Falha no processamento';
+      default: return 'Status desconhecido';
+    }
+  };
+
+  const isDisabled = isUploading || isProcessing;
 
   return (
     <div style={{ 
@@ -91,7 +157,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
           type="file"
           accept=".csv"
           onChange={handleFileSelect}
-          disabled={isUploading}
+          disabled={isDisabled}
           style={{ marginBottom: '10px' }}
         />
         
@@ -105,36 +171,92 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
       <div>
         <button
           onClick={handleUpload}
-          disabled={!selectedFile || isUploading}
+          disabled={!selectedFile || isDisabled}
           style={{
-            backgroundColor: selectedFile && !isUploading ? '#007bff' : '#ccc',
+            backgroundColor: selectedFile && !isDisabled ? '#007bff' : '#ccc',
             color: 'white',
             border: 'none',
             padding: '10px 20px',
             borderRadius: '4px',
-            cursor: selectedFile && !isUploading ? 'pointer' : 'not-allowed',
+            cursor: selectedFile && !isDisabled ? 'pointer' : 'not-allowed',
             marginRight: '10px'
           }}
         >
-          {isUploading ? 'Enviando...' : 'Enviar Arquivo'}
+          {isUploading ? 'Enviando...' : isProcessing ? 'Processando...' : 'Enviar Arquivo'}
         </button>
 
         <button
           onClick={resetForm}
-          disabled={isUploading}
+          disabled={isDisabled}
           style={{
             backgroundColor: '#6c757d',
             color: 'white',
             border: 'none',
             padding: '10px 20px',
             borderRadius: '4px',
-            cursor: isUploading ? 'not-allowed' : 'pointer'
+            cursor: isDisabled ? 'not-allowed' : 'pointer'
           }}
         >
           Limpar
         </button>
       </div>
 
+      {/* Status do processamento */}
+      {uploadStatus && (
+        <div style={{ 
+          marginTop: '20px', 
+          padding: '15px',
+          borderRadius: '4px',
+          textAlign: 'left',
+          backgroundColor: '#f8f9fa',
+          border: `2px solid ${getStatusColor(uploadStatus.status)}`
+        }}>
+          <div style={{ 
+            fontSize: '16px', 
+            fontWeight: 'bold', 
+            color: getStatusColor(uploadStatus.status),
+            marginBottom: '10px'
+          }}>
+            {getStatusIcon(uploadStatus.status)} {getStatusMessage(uploadStatus.status)}
+          </div>
+          
+          <div style={{ fontSize: '14px', marginBottom: '8px' }}>
+            {uploadStatus.message}
+          </div>
+
+          {uploadStatus.status === 'processing' && (
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              Processando em background... Atualizando automaticamente.
+            </div>
+          )}
+
+          {uploadStatus.result && (
+            <div style={{ marginTop: '10px', fontSize: '14px' }}>
+              <div>📊 Registros processados: <strong>{uploadStatus.result.processed_count}</strong></div>
+              <div>⚠️ Registros com erro: <strong>{uploadStatus.result.error_count}</strong></div>
+              {uploadStatus.result.errors && uploadStatus.result.errors.length > 0 && (
+                <div style={{ marginTop: '10px' }}>
+                  <strong>Erros encontrados:</strong>
+                  <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
+                    {uploadStatus.result.errors.slice(0, 5).map((error, index) => (
+                      <li key={index} style={{ fontSize: '12px', color: '#856404', marginBottom: '2px' }}>
+                        {error}
+                      </li>
+                    ))}
+                    {uploadStatus.result.errors.length > 5 && (
+                      <li style={{ fontSize: '12px', color: '#856404' }}>
+                        ... e mais {uploadStatus.result.errors.length - 5} erros
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Erros */}
       {error && (
         <div style={{ 
           marginTop: '20px', 
@@ -152,43 +274,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
         </div>
       )}
 
-      {uploadResult && (
-        <div style={{ 
-          marginTop: '20px', 
-          color: '#155724', 
-          backgroundColor: '#d4edda', 
-          border: '1px solid #c3e6cb',
-          borderRadius: '4px',
-          padding: '15px',
-          textAlign: 'left'
-        }}>
-          <strong>✅ {uploadResult.message}</strong>
-          {uploadResult.data && (
-            <div style={{ marginTop: '10px', fontSize: '14px' }}>
-              <div>📊 Registros processados: <strong>{uploadResult.data.processed_count}</strong></div>
-              <div>⚠️ Registros com erro: <strong>{uploadResult.data.error_count}</strong></div>
-              {uploadResult.data.errors && uploadResult.data.errors.length > 0 && (
-                <div style={{ marginTop: '10px' }}>
-                  <strong>Erros encontrados:</strong>
-                  <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
-                    {uploadResult.data.errors.slice(0, 5).map((error, index) => (
-                      <li key={index} style={{ fontSize: '12px', color: '#856404', marginBottom: '2px' }}>
-                        {error}
-                      </li>
-                    ))}
-                    {uploadResult.data.errors.length > 5 && (
-                      <li style={{ fontSize: '12px', color: '#856404' }}>
-                        ... e mais {uploadResult.data.errors.length - 5} erros
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       <div style={{ 
         marginTop: '20px', 
         fontSize: '12px', 
@@ -203,8 +288,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
         <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
           <li>Formato: CSV (.csv)</li>
           <li>Tamanho máximo: 80MB</li>
-          <li>Codificação: UTF-8 ou ISO-8859-1</li>
-          <li>Separadores aceitos: vírgula (,) ou ponto e vírgula (;)</li>
+          <li>Separador: ponto e vírgula (;)</li>
+          <li>Codificação: UTF-8</li>
           <li>Deve conter cabeçalhos nas colunas</li>
         </ul>
       </div>

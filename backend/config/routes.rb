@@ -2,10 +2,15 @@ Rails.application.routes.draw do
   # Health check endpoint
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Sidekiq monitoring (only in development)
+  require 'sidekiq/web' if Rails.env.development?
+  mount Sidekiq::Web => '/sidekiq' if Rails.env.development?
+
   namespace :api do
     # Upload endpoints
     post "uploads", to: "uploads#create"
     get "uploads/status", to: "uploads#status"
+    get "uploads/:id/status", to: "uploads#show_status"
 
     # Deputados endpoints
     resources :deputados, only: [:index, :show] do

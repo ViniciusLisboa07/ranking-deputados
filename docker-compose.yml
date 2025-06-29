@@ -37,8 +37,30 @@ services:
       RACK_ENV: development
       SECRET_KEY_BASE: '43727c68bb893b943e51acfaf0a1afd2b98a401d91083a4d113316717e45c13a6db110ee9c0554a5daa2b64c1166b01eb1e617c867615c389f65638069b96627'
       DATABASE_URL: postgresql://postgres:password@db:5432/ranking_deputados_development
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "3000:3000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - deputados_network
+
+  sidekiq:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: bash -c "bundle check || bundle install && bundle exec sidekiq"
+    volumes:
+      - ./backend:/rails
+      - ./backend/tmp:/rails/tmp
+      - ./backend/log:/rails/log
+    environment:
+      RAILS_ENV: development
+      RACK_ENV: development
+      SECRET_KEY_BASE: '43727c68bb893b943e51acfaf0a1afd2b98a401d91083a4d113316717e45c13a6db110ee9c0554a5daa2b64c1166b01eb1e617c867615c389f65638069b96627'
+      DATABASE_URL: postgresql://postgres:password@db:5432/ranking_deputados_development
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       - db
       - redis

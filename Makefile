@@ -7,6 +7,8 @@ down:
 build:
 	docker compose build
 
+sidekiq:
+	docker compose exec sidekiq sidekiq
 
 bash:
 	docker compose exec backend bash
