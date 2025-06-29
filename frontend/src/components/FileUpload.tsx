@@ -27,13 +27,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
       return;
     }
 
-    // Validação básica do tipo de arquivo
     if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
       setError('Por favor, selecione apenas arquivos CSV');
       return;
     }
 
-    // Validação do tamanho (80MB)
     if (selectedFile.size > 80 * 1024 * 1024) {
       setError('Arquivo muito grande. Tamanho máximo: 80MB');
       return;
@@ -47,13 +45,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
       setUploadResult(response);
       onUploadComplete?.(response);
       
-      // Limpar seleção de arquivo após sucesso
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      setError(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -68,13 +66,21 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
     }
   };
 
+  const formatErrorMessage = (errorMessage: string) => {
+    return errorMessage.split('\n').map((line, index) => (
+      <div key={index} style={{ marginBottom: index < errorMessage.split('\n').length - 1 ? '5px' : '0' }}>
+        {line}
+      </div>
+    ));
+  };
+
   return (
     <div style={{ 
       border: '2px dashed #ccc', 
       borderRadius: '8px', 
       padding: '20px', 
       textAlign: 'center',
-      maxWidth: '500px',
+      maxWidth: '600px',
       margin: '0 auto'
     }}>
       <h3>Upload de Arquivo CSV</h3>
@@ -132,13 +138,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
       {error && (
         <div style={{ 
           marginTop: '20px', 
-          color: '#dc3545', 
+          color: '#721c24', 
           backgroundColor: '#f8d7da', 
           border: '1px solid #f5c6cb',
           borderRadius: '4px',
-          padding: '10px'
+          padding: '15px',
+          textAlign: 'left'
         }}>
-          <strong>Erro:</strong> {error}
+          <strong>❌ Erro:</strong>
+          <div style={{ marginTop: '8px' }}>
+            {formatErrorMessage(error)}
+          </div>
         </div>
       )}
 
@@ -152,17 +162,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
           padding: '15px',
           textAlign: 'left'
         }}>
-          <strong>✓ {uploadResult.message}</strong>
+          <strong>✅ {uploadResult.message}</strong>
           {uploadResult.data && (
             <div style={{ marginTop: '10px', fontSize: '14px' }}>
-              <div>• Registros processados: {uploadResult.data.processed_count}</div>
-              <div>• Registros com erro: {uploadResult.data.error_count}</div>
+              <div>📊 Registros processados: <strong>{uploadResult.data.processed_count}</strong></div>
+              <div>⚠️ Registros com erro: <strong>{uploadResult.data.error_count}</strong></div>
               {uploadResult.data.errors && uploadResult.data.errors.length > 0 && (
                 <div style={{ marginTop: '10px' }}>
                   <strong>Erros encontrados:</strong>
                   <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
                     {uploadResult.data.errors.slice(0, 5).map((error, index) => (
-                      <li key={index} style={{ fontSize: '12px', color: '#856404' }}>
+                      <li key={index} style={{ fontSize: '12px', color: '#856404', marginBottom: '2px' }}>
                         {error}
                       </li>
                     ))}
@@ -179,8 +189,24 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
         </div>
       )}
 
-      <div style={{ marginTop: '15px', fontSize: '12px', color: '#6c757d' }}>
-        Formatos aceitos: CSV • Tamanho máximo: 80MB
+      <div style={{ 
+        marginTop: '20px', 
+        fontSize: '12px', 
+        color: '#6c757d',
+        textAlign: 'left',
+        backgroundColor: '#f8f9fa',
+        padding: '15px',
+        borderRadius: '4px',
+        border: '1px solid #e9ecef'
+      }}>
+        <strong>📋 Requisitos do arquivo:</strong>
+        <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+          <li>Formato: CSV (.csv)</li>
+          <li>Tamanho máximo: 80MB</li>
+          <li>Codificação: UTF-8 ou ISO-8859-1</li>
+          <li>Separadores aceitos: vírgula (,) ou ponto e vírgula (;)</li>
+          <li>Deve conter cabeçalhos nas colunas</li>
+        </ul>
       </div>
     </div>
   );
