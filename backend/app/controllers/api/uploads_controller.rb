@@ -1,11 +1,15 @@
+require 'csv'
+
 class Api::UploadsController < ApplicationController
   before_action :validate_file, only: [:create]
 
   def create
     begin
       temp_file = save_temp_file
+      puts "Arquivo salvo em: #{temp_file.path}"
       
       csv_validation = validate_csv_content(temp_file.path)
+      puts "Validação do CSV: #{csv_validation}"
       unless csv_validation[:valid]
         temp_file.unlink
         render json: {
@@ -15,26 +19,30 @@ class Api::UploadsController < ApplicationController
         return
       end
       
-      processor = CsvProcessorService.new(temp_file.path)
-      result = processor.process
+      upload_id = SecureRandom.hex(16)
       
+      permanent_file_path = Rails.root.join('tmp', 'uploads', "#{upload_id}.csv")
+      FileUtils.mkdir_p(File.dirname(permanent_file_path))
+      FileUtils.cp(temp_file.path, permanent_file_path)
+      
+      puts "Arquivo salvo em: #{permanent_file_path}"
+
       temp_file.unlink
       
-      if result[:success]
-        render json: {
-          message: 'Arquivo processado com sucesso!',
-          data: {
-            processed_count: result[:processed_count],
-            error_count: result[:error_count],
-            errors: result[:errors]
-          }
-        }, status: :ok
-      else
-        render json: {
-          message: 'Erro ao processar arquivo',
-          error: result[:error]
-        }, status: :unprocessable_entity
-      end
+      Rails.cache.write("upload_#{upload_id}_status", {
+        status: 'queued',
+        message: 'Arquivo adicionado à fila de processamento',
+        queued_at: Time.current
+      })
+      
+      puts "Enviando para processamento em background"
+      CsvProcessorJob.perform_later(permanent_file_path.to_s, upload_id)
+      
+      render json: {
+        message: 'Arquivo enviado para processamento em background',
+        upload_id: upload_id,
+        status_url: "/api/uploads/#{upload_id}/status"
+      }, status: :accepted
       
     rescue => e
       temp_file&.unlink
@@ -43,6 +51,23 @@ class Api::UploadsController < ApplicationController
         message: 'Erro interno no servidor',
         error: e.message
       }, status: :internal_server_error
+    end
+  end
+
+  def show_status
+    upload_id = params[:id]
+    status = Rails.cache.read("upload_#{upload_id}_status")
+    
+    if status
+      render json: {
+        upload_id: upload_id,
+        **status
+      }
+    else
+      render json: {
+        message: 'Upload não encontrado',
+        error: 'ID de upload inválido ou expirado'
+      }, status: :not_found
     end
   end
 

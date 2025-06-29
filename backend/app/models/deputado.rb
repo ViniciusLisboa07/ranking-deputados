@@ -1,7 +1,6 @@
 class Deputado < ApplicationRecord
   has_many :despesas, dependent: :destroy
 
-  validates :nome, presence: true
   validates :deputado_id, presence: true, uniqueness: true
 
   scope :por_uf, ->(uf) { where(uf: uf) }
