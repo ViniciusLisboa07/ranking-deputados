@@ -23,27 +23,9 @@ class Api::DeputadosController < ApplicationController
   end
 
   def statistics
-    stats = {
-      total_deputados: Deputado.count,
-      deputados_por_uf: Deputado.group(:uf).count,
-      deputados_por_partido: Deputado.group(:partido).count,
-      top_gastadores: Deputado.joins(:despesas)
-        .group('deputados.id', 'deputados.nome', 'deputados.uf', 'deputados.partido')
-        .sum('despesas.valor_liquido')
-        .sort_by { |_, total| -total }
-        .first(10)
-        .map { |deputado_info, total| 
-          {
-            id: deputado_info[0],
-            nome: deputado_info[1], 
-            uf: deputado_info[2],
-            partido: deputado_info[3],
-            total_gasto: total.to_f
-          }
-        }
-    }
+    result = deputados_service.get_statistics(params)
 
-    render json: { data: stats }
+    render json: { data: result }
   end
 
   private
