@@ -76,7 +76,6 @@ class ApiService {
     return response.json();
   }
 
-  // Método para fazer polling do status até completar
   async pollUploadStatus(uploadId: string, onStatusUpdate?: (status: UploadStatus) => void): Promise<UploadStatus> {
     return new Promise((resolve, reject) => {
       const poll = async () => {
@@ -90,7 +89,6 @@ class ApiService {
           if (status.status === 'completed' || status.status === 'failed') {
             resolve(status);
           } else {
-            // Continuar polling a cada 2 segundos
             setTimeout(poll, 2000);
           }
         } catch (error) {
