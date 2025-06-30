@@ -1,6 +1,9 @@
 class DeputadoService
 
-  def query_deputados(params)
+  def query_deputados(params = {})
+    # Garantir que params não seja nil
+    params ||= {}
+    
     @deputados = Deputado.all
     @deputados = @deputados.where(uf: params[:uf]) if params[:uf].present?
     @deputados = @deputados.where(partido: params[:partido]) if params[:partido].present?
@@ -21,7 +24,9 @@ class DeputadoService
     end
 
     page = [params[:page]&.to_i || 1, 1].max
-    per_page = [params[:per_page]&.to_i || 20, 100].min
+    per_page = [params[:per_page]&.to_i || 20, 1].max # Garantir que per_page seja pelo menos 1
+    per_page = [per_page, 100].min # Limitar ao máximo 100
+    
     offset = (page - 1) * per_page
 
     total_count = @deputados.count
@@ -52,13 +57,16 @@ class DeputadoService
         }
       end
 
+    # Calcular total_pages evitando divisão por zero
+    total_pages = total_count > 0 ? (total_count.to_f / per_page).ceil : 0
+
     {
       deputados: deputados_with_stats,
       pagination: {
         current_page: page,
         per_page: per_page,
         total_count: total_count,
-        total_pages: (total_count.to_f / per_page).ceil
+        total_pages: total_pages
       }
     }
   end
