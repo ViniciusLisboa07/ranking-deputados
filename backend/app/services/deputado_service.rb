@@ -113,4 +113,65 @@ class DeputadoService
       despesas: todas_despesas
     }
   end
+
+  def get_statistics(params = {})
+    limit = params[:limit]&.to_i || 10
+    
+    total_deputados = Deputado.count
+    total_despesas = Despesa.sum(:valor_liquido).to_f
+    
+    deputados_por_uf = Deputado.group(:uf).count
+    deputados_por_partido = Deputado.group(:partido).count
+    
+    gastos_por_uf = Despesa.joins(:deputado)
+      .group('deputados.uf')
+      .order('SUM(despesas.valor_liquido) DESC')
+      .sum(:valor_liquido)
+      .transform_values(&:to_f)
+    
+    gastos_por_partido = Despesa.joins(:deputado)
+      .group('deputados.partido')
+      .order('SUM(despesas.valor_liquido) DESC')
+      .sum(:valor_liquido)
+      .transform_values(&:to_f)
+    
+    top_gastadores = Deputado.joins(:despesas)
+      .group('deputados.id', 'deputados.nome', 'deputados.uf', 'deputados.partido')
+      .order('SUM(despesas.valor_liquido) DESC')
+      .limit(limit)
+      .sum('despesas.valor_liquido')
+      .map { |deputado_info, total| 
+        {
+          id: deputado_info[0],
+          nome: deputado_info[1], 
+          uf: deputado_info[2],
+          partido: deputado_info[3],
+          total_gasto: total.to_f
+        }
+      }
+    
+    top_categorias = Despesa.group(:descricao)
+      .order('SUM(valor_liquido) DESC')
+      .limit(10)
+      .sum(:valor_liquido)
+      .transform_values(&:to_f)
+    
+    {
+      resumo: {
+        total_deputados: total_deputados,
+        total_despesas: total_despesas,
+        valor_medio_por_deputado: total_deputados > 0 ? (total_despesas / total_deputados).round(2) : 0
+      },
+      distribuicoes: {
+        deputados_por_uf: deputados_por_uf,
+        deputados_por_partido: deputados_por_partido,
+        gastos_por_uf: gastos_por_uf,
+        gastos_por_partido: gastos_por_partido
+      },
+      rankings: {
+        top_gastadores: top_gastadores,
+        top_categorias: top_categorias
+      }
+    }
+  end
 end
