@@ -1,17 +1,33 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  nome: MyString
-  cpf: MyString
-  carteira_parlamentar: MyString
-  uf: MyString
-  partido: MyString
-  deputado_id: 1
+joao_silva:
+  nome: "João Silva"
+  cpf: "123.456.789-00"
+  carteira_parlamentar: "001"
+  uf: "SP"
+  partido: "PT"
+  deputado_id: 1001
 
-two:
-  nome: MyString
-  cpf: MyString
-  carteira_parlamentar: MyString
-  uf: MyString
-  partido: MyString
-  deputado_id: 1
+maria_santos:
+  nome: "Maria Santos"
+  cpf: "987.654.321-00"
+  carteira_parlamentar: "002"
+  uf: "RJ"
+  partido: "PSDB"
+  deputado_id: 1002
+
+pedro_oliveira:
+  nome: "Pedro Oliveira"
+  cpf: "456.789.123-00"
+  carteira_parlamentar: "003"
+  uf: "MG"
+  partido: "PL"
+  deputado_id: 1003
+
+ana_costa:
+  nome: "Ana Costa"
+  cpf: "789.123.456-00"
+  carteira_parlamentar: "004"
+  uf: "RS"
+  partido: "PT"
+  deputado_id: 1004

@@ -159,15 +159,94 @@ class Api::RankingsController < ApplicationController
   def calculate_ranking
     case params[:tipo]
     when 'por_categoria'
-      return por_categoria
+      categoria = params[:categoria] || get_top_category
+      filters = build_base_filters
+      
+      Deputado.joins(:despesas)
+        .where(filters[:deputados_where])
+        .where(despesas: filters[:despesas_where])
+        .where("despesas.descricao ILIKE ?", "%#{categoria}%")
+        .group('deputados.id', 'deputados.nome', 'deputados.uf', 'deputados.partido')
+        .sum('despesas.valor_liquido')
+        .sort_by { |_, total| -total }
+        .first(params[:limit]&.to_i || 30)
+        .map.with_index(1) do |(deputado_info, total), position|
+          {
+            posicao: position,
+            deputado: {
+              id: deputado_info[0],
+              nome: deputado_info[1],
+              uf: deputado_info[2],
+              partido: deputado_info[3]
+            },
+            total_gasto: total.to_f,
+            categoria: categoria
+          }
+        end
     when 'por_estado'
-      return por_estado
+      uf = params[:uf]
+      if uf.present?
+        ranking_por_uf_especifica(uf)
+      else
+        ranking_geral_por_estados
+      end
     when 'por_partido'
-      return por_partido
+      partido = params[:partido]
+      if partido.present?
+        ranking_por_partido_especifico(partido)
+      else
+        ranking_geral_por_partidos
+      end
     when 'eficiencia'
-      return eficiencia_gastos
+      filters = build_base_filters
+      min_documentos = params[:min_documentos]&.to_i || 10
+      
+      Deputado.joins(:despesas)
+        .where(filters[:deputados_where])
+        .where(despesas: filters[:despesas_where])
+        .group('deputados.id', 'deputados.nome', 'deputados.uf', 'deputados.partido')
+        .having('COUNT(despesas.id) >= ?', min_documentos)
+        .sum('despesas.valor_liquido')
+        .sort_by { |_, total| total }
+        .first(params[:limit]&.to_i || 30)
+        .map.with_index(1) do |(deputado_info, total), position|
+          {
+            posicao: position,
+            deputado: {
+              id: deputado_info[0],
+              nome: deputado_info[1],
+              uf: deputado_info[2],
+              partido: deputado_info[3]
+            },
+            total_gasto: total.to_f,
+            documentos_count: get_documents_count(deputado_info[0], filters),
+            gasto_por_documento: (total.to_f / get_documents_count(deputado_info[0], filters)).round(2)
+          }
+        end
     else
-      return gastos_totais
+      # gastos_totais
+      filters = build_base_filters
+      
+      Deputado.joins(:despesas)
+        .where(filters[:deputados_where])
+        .where(despesas: filters[:despesas_where])
+        .group('deputados.id', 'deputados.nome', 'deputados.uf', 'deputados.partido')
+        .sum('despesas.valor_liquido')
+        .sort_by { |_, total| -total }
+        .first(params[:limit]&.to_i || 50)
+        .map.with_index(1) do |(deputado_info, total), position|
+          {
+            posicao: position,
+            deputado: {
+              id: deputado_info[0],
+              nome: deputado_info[1],
+              uf: deputado_info[2],
+              partido: deputado_info[3]
+            },
+            total_gasto: total.to_f,
+            documentos_count: get_documents_count(deputado_info[0], filters)
+          }
+        end
     end
   end
 
@@ -175,11 +254,9 @@ class Api::RankingsController < ApplicationController
     deputados_where = {}
     despesas_where = {}
     
-    # Filters for deputados
     deputados_where[:uf] = params[:uf] if params[:uf].present?
     deputados_where[:partido] = params[:partido] if params[:partido].present?
     
-    # Filters for despesas
     despesas_where[:ano] = params[:ano] if params[:ano].present?
     despesas_where[:mes] = params[:mes] if params[:mes].present?
     

@@ -1,41 +1,101 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  deputado: one
-  descricao: MyString
-  especificacao: MyString
-  fornecedor: MyString
-  cnpj_cpf_fornecedor: MyString
-  numero_documento: MyString
+passagem_aerea_joao:
+  deputado: joao_silva
+  descricao: "PASSAGEM AÉREA NACIONAL"
+  especificacao: "Voo São Paulo - Brasília"
+  fornecedor: "TAM Linhas Aéreas"
+  cnpj_cpf_fornecedor: "02.012.862/0001-60"
+  numero_documento: "001234567"
   tipo_documento: 1
-  data_emissao: 2025-06-29
-  valor_documento: 9.99
-  valor_glosa: 9.99
-  valor_liquido: 9.99
-  mes: 1
-  ano: 1
+  data_emissao: 2024-03-15
+  valor_documento: 1500.00
+  valor_glosa: 0.00
+  valor_liquido: 1500.00
+  mes: 3
+  ano: 2024
   parcela: 1
-  passageiro: MyString
-  trecho: MyString
-  lote: MyString
-  url_documento: MyString
+  passageiro: "João Silva"
+  trecho: "São Paulo - Brasília"
+  lote: "LOT001"
+  url_documento: "https://www.camara.leg.br/documento123"
 
-two:
-  deputado: two
-  descricao: MyString
-  especificacao: MyString
-  fornecedor: MyString
-  cnpj_cpf_fornecedor: MyString
-  numero_documento: MyString
-  tipo_documento: 1
-  data_emissao: 2025-06-29
-  valor_documento: 9.99
-  valor_glosa: 9.99
-  valor_liquido: 9.99
-  mes: 1
-  ano: 1
+combustivel_maria:
+  deputado: maria_santos
+  descricao: "COMBUSTÍVEIS E LUBRIFICANTES"
+  especificacao: "Gasolina comum"
+  fornecedor: "Posto Ipiranga"
+  cnpj_cpf_fornecedor: "33.000.167/0001-36"
+  numero_documento: "002345678"
+  tipo_documento: 2
+  data_emissao: 2024-03-20
+  valor_documento: 250.50
+  valor_glosa: 0.00
+  valor_liquido: 250.50
+  mes: 3
+  ano: 2024
   parcela: 1
-  passageiro: MyString
-  trecho: MyString
-  lote: MyString
-  url_documento: MyString
+  passageiro: ""
+  trecho: ""
+  lote: "LOT002"
+  url_documento: "https://www.camara.leg.br/documento456"
+
+alimentacao_pedro:
+  deputado: pedro_oliveira
+  descricao: "FORNECIMENTO DE ALIMENTAÇÃO"
+  especificacao: "Refeições em evento"
+  fornecedor: "Restaurante Brasília"
+  cnpj_cpf_fornecedor: "11.222.333/0001-44"
+  numero_documento: "003456789"
+  tipo_documento: 1
+  data_emissao: 2024-02-10
+  valor_documento: 450.80
+  valor_glosa: 50.80
+  valor_liquido: 400.00
+  mes: 2
+  ano: 2024
+  parcela: 1
+  passageiro: ""
+  trecho: ""
+  lote: "LOT003"
+  url_documento: "https://www.camara.leg.br/documento789"
+
+material_escritorio_ana:
+  deputado: ana_costa
+  descricao: "MANUTENÇÃO DE ESCRITÓRIO"
+  especificacao: "Material de escritório"
+  fornecedor: "Papelaria Central"
+  cnpj_cpf_fornecedor: "55.666.777/0001-88"
+  numero_documento: "004567890"
+  tipo_documento: 2
+  data_emissao: 2024-01-25
+  valor_documento: 180.00
+  valor_glosa: 0.00
+  valor_liquido: 180.00
+  mes: 1
+  ano: 2024
+  parcela: 1
+  passageiro: ""
+  trecho: ""
+  lote: "LOT004"
+  url_documento: "https://www.camara.leg.br/documento012"
+
+grande_despesa_joao:
+  deputado: joao_silva
+  descricao: "DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR"
+  especificacao: "Campanha publicitária"
+  fornecedor: "Agência de Publicidade XYZ"
+  cnpj_cpf_fornecedor: "99.888.777/0001-66"
+  numero_documento: "005678901"
+  tipo_documento: 1
+  data_emissao: 2024-04-05
+  valor_documento: 25000.00
+  valor_glosa: 2000.00
+  valor_liquido: 23000.00
+  mes: 4
+  ano: 2024
+  parcela: 1
+  passageiro: ""
+  trecho: ""
+  lote: "LOT005"
+  url_documento: "https://www.camara.leg.br/documento345"

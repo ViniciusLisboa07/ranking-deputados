@@ -1,0 +1,2 @@
+This is a test file for upload validation.
+It should be rejected when uploaded as a CSV file. 

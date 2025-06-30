@@ -98,7 +98,16 @@ class Api::UploadsController < ApplicationController
 
     file = params[:file]
     
-    unless file.content_type.in?(['text/csv', 'application/csv', 'text/plain'])
+    unless file.respond_to?(:content_type) && file.respond_to?(:original_filename) && file.respond_to?(:size)
+      render json: { 
+        message: 'Arquivo inválido',
+        error: 'O arquivo enviado não é válido'
+      }, status: :bad_request
+      return
+    end
+    
+    content_type = file.content_type || ''
+    unless content_type.in?(['text/csv', 'application/csv', 'text/plain'])
       render json: { 
         message: 'Tipo de arquivo inválido',
         error: 'Apenas arquivos CSV são permitidos'
@@ -114,7 +123,8 @@ class Api::UploadsController < ApplicationController
       return
     end
 
-    unless file.original_filename&.downcase&.end_with?('.csv')
+    filename = file.original_filename || ''
+    unless filename.downcase.end_with?('.csv')
       render json: { 
         message: 'Extensão de arquivo inválida',
         error: 'O arquivo deve ter extensão .csv'
@@ -149,8 +159,17 @@ class Api::UploadsController < ApplicationController
   def save_temp_file
     file = params[:file]
     
+    # Verificar se o arquivo tem o método read
+    unless file.respond_to?(:read)
+      raise "Arquivo inválido para leitura"
+    end
+    
     temp_file = Tempfile.new(['upload', '.csv'])
     temp_file.binmode
+    
+    # Resetar posição do arquivo se possível
+    file.rewind if file.respond_to?(:rewind)
+    
     temp_file.write(file.read)
     temp_file.rewind
     temp_file.close

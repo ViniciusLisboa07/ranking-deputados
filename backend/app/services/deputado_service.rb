@@ -20,7 +20,7 @@ class DeputadoService
       @deputados = @deputados.order(:nome)
     end
 
-    page = params[:page]&.to_i || 1
+    page = [params[:page]&.to_i || 1, 1].max
     per_page = [params[:per_page]&.to_i || 20, 100].min
     offset = (page - 1) * per_page
 
