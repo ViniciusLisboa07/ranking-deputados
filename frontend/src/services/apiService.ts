@@ -37,6 +37,59 @@ export interface DatabaseStatus {
   };
 }
 
+export interface Statistics {
+  data: {
+    resumo: {
+      total_deputados: number;
+      total_despesas: number;
+      valor_medio_por_deputado: number;
+    };
+    distribuicoes: {
+      deputados_por_uf: Record<string, number>;
+      deputados_por_partido: Record<string, number>;
+      gastos_por_uf: Record<string, number>;
+      gastos_por_partido: Record<string, number>;
+    };
+    rankings: {
+      top_gastadores: Array<{
+        id: number;
+        nome: string;
+        nome_display: string;
+        uf: string;
+        partido: string;
+        deputado_id: number;
+        carteira_parlamentar: string;
+        total_gasto: number;
+      }>;
+      top_categorias: Record<string, number>;
+    };
+  }
+}
+
+export interface Deputado {
+  id: number;
+  nome: string;
+  cpf: string;
+  carteira_parlamentar: string;
+  uf: string;
+  partido: string;
+  deputado_id: number;
+  total_despesas: number;
+  total_documentos: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeputadosResponse {
+  data: Deputado[];
+  pagination: {
+    current_page: number;
+    per_page: number;
+    total_count: number;
+    total_pages: number;
+  };
+}
+
 class ApiService {
   async uploadFile(file: File): Promise<UploadResponse> {
     const formData = new FormData();
@@ -71,6 +124,48 @@ class ApiService {
     
     if (!response.ok) {
       throw new Error('Erro ao buscar status do banco de dados');
+    }
+
+    return response.json();
+  }
+
+  async getStatistics(limit?: number): Promise<Statistics> {
+    const url = new URL(`${API_BASE_URL}/api/deputados/statistics`);
+    if (limit) {
+      url.searchParams.append('limit', limit.toString());
+    }
+
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      throw new Error('Erro ao buscar estatísticas');
+    }
+
+    return response.json();
+  }
+
+  async getDeputados(params?: {
+    uf?: string;
+    partido?: string;
+    search?: string;
+    order_by?: string;
+    page?: number;
+    per_page?: number;
+  }): Promise<DeputadosResponse> {
+    const url = new URL(`${API_BASE_URL}/api/deputados`);
+    
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          url.searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      throw new Error('Erro ao buscar deputados');
     }
 
     return response.json();

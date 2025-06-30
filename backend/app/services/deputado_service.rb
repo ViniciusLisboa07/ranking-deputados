@@ -125,7 +125,7 @@ class DeputadoService
   def get_statistics(params = {})
     limit = params[:limit]&.to_i || 10
     
-    total_deputados = Deputado.count
+    total_deputados = Deputado.all.count
     total_despesas = Despesa.sum(:valor_liquido).to_f
     
     deputados_por_uf = Deputado.group(:uf).count
@@ -144,23 +144,34 @@ class DeputadoService
       .transform_values(&:to_f)
     
     top_gastadores = Deputado.joins(:despesas)
-      .group('deputados.id', 'deputados.nome', 'deputados.uf', 'deputados.partido')
+      .group('deputados.id', 'deputados.nome', 'deputados.uf', 'deputados.partido', 'deputados.deputado_id', 'deputados.carteira_parlamentar')
       .order('SUM(despesas.valor_liquido) DESC')
       .limit(limit)
       .sum('despesas.valor_liquido')
       .map { |deputado_info, total| 
+        nome_display = if deputado_info[1].present?
+          deputado_info[1]
+        elsif deputado_info[5].present?
+          "Carteira #{deputado_info[5]}"
+        else
+          "Deputado #{deputado_info[4]}"
+        end
+        
         {
           id: deputado_info[0],
           nome: deputado_info[1], 
+          nome_display: nome_display,
           uf: deputado_info[2],
           partido: deputado_info[3],
+          deputado_id: deputado_info[4],
+          carteira_parlamentar: deputado_info[5],
           total_gasto: total.to_f
         }
       }
     
     top_categorias = Despesa.group(:descricao)
       .order('SUM(valor_liquido) DESC')
-      .limit(10)
+      .limit(limit)
       .sum(:valor_liquido)
       .transform_values(&:to_f)
     
